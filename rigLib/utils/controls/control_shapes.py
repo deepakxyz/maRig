@@ -1,303 +1,4 @@
-'''
-
-Control Curves Tool made by Brandon Schaal
-
-Easily create control curves, change control curve colors, and replace control curve shapes. Changes colors on the shape level to 
-avoid all children of the controls inheriting drawing overrides, resets the colors at both shape and transform levels, and can replace 
-multiple shapes on controllers with either one or an equal amount of replacement shapes. 
-
-This tool has a list of 35 different control shapes that can be created at selected objects in world space or as a parent/child of the objects. 
-There is also the option to just make the control at the origin, as well as to replace suffixes or name controls as needed and evem change the 
-thickness of created controls. New shapes can easily be added to the BSControlsData class dictionary and text scroll list  as needed. All control 
-curves are made linear with many CVs to create complex shapes while only using one shape node per control curve (with one exception for the Gear curve). 
-A function is provided below to easily get the tuple list of all CV positions of a control curve you wish to add.
-
-'''
-
-import maya.cmds as cmds
-
-class BSControlsUtils():
-    # Function for creating a new control curve name.
-    def bsNameCurve(self, obj, name):
-        # List of common suffixes to remove
-        suffixList = ['_JNT','_Jnt','_jnt','_Bnd','_BND','_bnd','_JT','_Jt','_jt','_DRV','Drv','_drv','_CON','_Con','_con','_CTRL','_Ctrl','ctrl'
-                            '_anim','_ANIM','_Anim','_LOC','_Loc','_loc','_GRP','_Grp','_grp']
-
-        if name == '':
-            newName = obj + '_ANIM' # Default suffix to add.
-        else:
-            if ' ' in name:
-                newName = name.replace(' ', '_')
-                newName = newName.split('_')
-            else:
-                newName = name.split('_')
-
-            if len(newName) > 1:
-                newName = '_'.join(newName)
-            else:
-                newName = obj
-                for suf in suffixList:
-                    newName = newName.replace(suf, '')
-                newName = newName + '_' + name
-
-        return newName
-
-    # Function to draw nurbs curves from dictionary data and user input.
-    def bsDrawCurve(self, curve, thickness):
-        # Exception for Circle shape.
-        if curve == 'Circle':
-            crv = cmds.circle(d=3, r=2, nr=[0,1,0], ch=False)
-        else:
-            crv = cmds.curve(d=1, p=BSControlsData.cvTuples[curve])
-
-        # Exception for adding an additional shape node to the Gear curve.
-        if curve == 'Gear':
-            circle = cmds.circle(r=0.9, nr=[0,1,0])
-            circleShape = cmds.listRelatives(circle, s=True)
-            circleShape = cmds.rename(circleShape, crv + 'CircleShape')
-            cmds.parent(circleShape, crv, add=True, s=True)
-            cmds.delete(circle)
-
-        # Only adjusting the lineWidth attribute only if a value greater than 1.0 is input.
-        if thickness > 1.0:
-            crvShape = cmds.listRelatives(crv, s=True)
-            for c in crvShape:
-                cmds.setAttr('%s.lineWidth'%(c), thickness)
-        else:
-            pass
-
-        return crv
-
-    # Function to move the control curve after drawing and renaming the curve.
-    def bsCurvePosition(self, obj, curve, thickness, name):
-        # Creating and naming curve.
-        newName = self.bsNameCurve(obj, name)
-        crv = self.bsDrawCurve(curve, thickness)
-        crv = cmds.rename(crv, newName)
-
-        # Matching positions with a parent constraint.
-        const = cmds.parentConstraint(obj, crv)
-        cmds. delete(const)
-
-        return crv
-
-    # Function to place the controls in proper hierarchies based on user input.
-    def bsPlaceControls(self, button, curve, name, thickness):
-        sel = cmds.ls(sl=True)
-
-        # Parent Button
-        if button == 'parent':
-            if len(sel) < 1:
-                cmds.error('Select at least 1 object.')
-
-            for obj in sel:
-                crv = self.bsCurvePosition(obj, curve[0], thickness, name)
-                
-                objParent = cmds.listRelatives(obj, p=True, typ='transform')
-
-                if objParent != None:
-                    cmds.parent(crv, objParent)
-
-                cmds.parent(obj, crv)
-
-        # Child Button
-        elif button == 'child':
-            if len(sel) < 1:
-                cmds.error('Select at least 1 object.')
-
-            for obj in sel:
-                crv = self.bsCurvePosition(obj, curve[0], thickness, name)
-
-                objChild = cmds.listRelatives(obj, c=True, typ='transform')
-
-                if objChild != None:
-                    cmds.parent(objChild, crv)
-
-                cmds.parent(crv, obj)
-
-        # World Button
-        elif button == 'world':
-            if len(sel) < 1:
-                cmds.error('Select at least 1 object.')
-
-            for obj in sel:
-                crv = self.bsCurvePosition(obj, curve[0], thickness, name)
-
-        # Origin Button
-        elif button == 'origin':
-            crv = self.bsDrawCurve(curve[0], thickness)
-
-            if name == '':
-                name = curve[0].lower()
-                name = name.replace(' ', '_')
-                cmds.rename(crv, name)
-            else:
-                name = name.replace(' ', '_')
-                cmds.rename(crv, name)
-
-    # Function to set the color of the selected shapes.
-    def bsSetIndex(self, color):
-        sel = cmds.ls(sl=True, l=True)
-
-        for objs in sel:
-            # Getting and checking node type to act on shape level
-            nType = cmds.nodeType(objs)
-
-            if nType == 'transform':
-                objs = cmds.listRelatives(objs, s=True)
-            elif nType == 'shape':
-                pass
-            else:
-                cmds.error('Selected object(s) is not a nurbs curve.')
-
-            # Changing drawing override color on multiple shapes.
-            for obj in objs:
-                override = cmds.getAttr('%s.overrideEnabled'%(obj))
-                if override == 0:
-                    cmds.setAttr('%s.overrideEnabled'%(obj), 1)
-
-                display = cmds.getAttr('%s.overrideDisplayType'%(obj))
-                if display != 0:
-                    cmds.setAttr('%s.overrideDisplayType'%(obj), 0)
-
-                cmds.setAttr('%s.overrideColor'%(obj), color)
-
-        cmds.select(d=True)  
-
-    # Function to set the selected shapes display type.
-    def bsSetDisplayType(self, display):
-        sel = cmds.ls(sl=True, l=True)
-
-        for objs in sel:
-            # Getting and checking node type to act on shape level
-            nType = cmds.nodeType(objs)
-
-            if nType == 'transform':
-                objs = cmds.listRelatives(objs, s=True)
-            elif nType == 'shape':
-                pass
-            else:
-                cmds.error('Selected object(s) is not a nurbs curve.')
-
-            # Changing drawing override display type on multiple shapes.
-            for obj in objs:
-                override = cmds.getAttr('%s.overrideEnabled'%(obj))
-                if override == 0:
-                    cmds.setAttr('%s.overrideEnabled'%(obj), 1)
-
-                cmds.setAttr('%s.overrideDisplayType'%(obj), display)
-
-        cmds.select(d=True)
-
-    # Function to reset the color of selected shapes.
-    def bsResetColor(self, *args):
-        sel = cmds.ls(sl=True, l=True)
-
-        for objs in sel:
-            # Resetting drawing overrides on transform level.
-            override = cmds.getAttr('%s.overrideEnabled'%(objs))
-            if override == 1:
-                cmds.setAttr('%s.overrideEnabled'%(objs), 0)
-
-            cmds.setAttr('%s.overrideColor'%(objs), 0)
-            cmds.setAttr('%s.overrideDisplayType'%(objs), 0)
-
-            # Getting and checking node type to act on shape level.
-            nType = cmds.nodeType(objs)
-
-            if nType == 'transform':
-                shapes = cmds.listRelatives(objs, s=True)
-            elif nType == 'shape':
-                pass
-            else:
-                cmds.error('Selected object(s) is not a nurbs curve.')
-
-            # Resetting drawing overrides on multiple shapes.
-            for s in shapes:
-                overrideShape = cmds.getAttr('%s.overrideEnabled'%(s))
-                if overrideShape == 1:
-                    cmds.setAttr('%s.overrideEnabled'%(s), 0)
-                cmds.setAttr('%s.overrideColor'%(s), 0)
-                cmds.setAttr('%s.overrideDisplayType'%(s), 0)
-
-        cmds.select(d=True)
-
-    # Function to load shapes into text fields with a button press and return the selection.
-    def bsLoadShapes(self, textField):
-        sel = cmds.ls(sl=True, l=True)
-
-        niceSel = [s.split('|')[-1] for s in sel]
- 
-        text = ', '.join(niceSel)
-        length = len(niceSel)
-
-        # If more than one object is selected the text box will display how many shapes are loaded instead of names.
-        if length > 1:
-            cmds.textField(textField, e=True, tx='%d shapes loaded.'%(length))
-        else:
-            cmds.textField(textField, e=True, tx=text)
-
-        return sel
-
-    # Function to replace shape(s) with a loaded replacement(s).
-    def bsReplaceShape(self, target, replacement, mirror):
-        # Duplicating the replacement shape source.
-        duplicate = cmds.duplicate(replacement, rr=True, rc=True, n='temp_CRV')
-
-        # Unlocking attributes for parent constraint and freeze transforms.
-        cmds.setAttr (duplicate[0] + '.tx', l = 0, k = 1)
-        cmds.setAttr (duplicate[0] + '.ty', l = 0, k = 1)
-        cmds.setAttr (duplicate[0] + '.tz', l = 0, k = 1)
-        cmds.setAttr (duplicate[0] + '.rx', l = 0, k = 1)
-        cmds.setAttr (duplicate[0] + '.ry', l = 0, k = 1)
-        cmds.setAttr (duplicate[0] + '.rz', l = 0, k = 1)
-        cmds.setAttr (duplicate[0] + '.sx', l = 0, k = 1)
-        cmds.setAttr (duplicate[0] + '.sy', l = 0, k = 1)
-        cmds.setAttr (duplicate[0] + '.sz', l = 0, k = 1)
-
-        # Parenting duplicate to world and deleting the children
-        duplicatePar = cmds.listRelatives(duplicate, p=True)
-        if duplicatePar != None:
-            duplicate = cmds.parent(duplicate, w=True)
-            
-        children = cmds.listRelatives(duplicate, c=True, f=True)
-        for child in children:
-            c = child.lower()
-            if 'shape' in c:
-                pass
-            else:
-                cmds.delete(child)
-
-        # Matching the position of the target
-        if mirror == True:
-            grp = cmds.group(em=True, w=True, n='mirror_GRP')
-            cmds.parent(duplicate, grp)
-            cmds.setAttr('%s.scaleX'%(grp), -1.0)
-            cmds.parent(duplicate, w=True)
-            cmds.delete(grp)
-        else:
-            const = cmds.parentConstraint(target, duplicate)
-            cmds.delete(const)
-
-        # Parenting the duplicate to target shape's parent.
-        cmds.parent(duplicate, target)
-        cmds.makeIdentity(duplicate, apply=True, t=1, r=1, s=1)
-
-        # Getting the shape nodes and deleting the target's current shape
-        duplicateShape = cmds.listRelatives(duplicate, s=True)
-        targetShape = cmds.listRelatives(target, s=True)
-        targetNice = target.split('|')[-1] + 'Shape'
-        cmds.delete(targetShape)
-
-        # Parenting the duplicate shapes to target transform and renaming.
-        for shape in duplicateShape:
-            shape = cmds.rename(shape, targetNice)
-            cmds.parent(shape, target, add=True, s=True)
-
-        # Deleting duplicate.
-        cmds.delete(duplicate)
-
-class BSControlsData():
+class ControlShapes():
     '''
     If you wish to add more control curve options to the menu, simply add a new name into the "controlNames" list and a corresponding key in the dictionary
     with the list of tuples for CV coordinates. To easily get the list of tuples for a controller, select all of the CVs of a linear nurbs curve and run 
@@ -311,36 +12,36 @@ class BSControlsData():
     '''
 
     # List of all control curve names.
-    controlNames = ['Circle', 'Half Circle', 'Square', 'Triangle', 'Sphere', 'Half Sphere','Box', 'Pyramid', 'Diamond', 'Circle Pin','Square Pin', 
-        'Sphere Pin', 'Circle Dumbbell', 'Square Dumbbell', 'Sphere Dumbbell', 'Cross', 'Cross Thin', 'Locator', 'Four Arrows', 'Four Arrows Thin',
-        'Curved Four Arrows', 'Curved Four Arrows Thin', 'Two Arrows', 'Two Arrows Thin', 'Curved Two Arrows', 'Curved Two Arrows Thin', 'One Arrow', 
-        'One Arrow Thin', 'Circle One Arrow',  'Circle Two Arrows', 'Circle Three Arrows', 'Circle Four Arrows', 'Sphere Four Arrows', 'Gear']
+    controlNames = ['Circle', 'Half Circle', 'Square', 'Triangle', 'Sphere', 'Half Sphere', 'Box', 'Pyramid', 'Diamond', 'Circle Pin', 'Square Pin',
+                    'Sphere Pin', 'Circle Dumbbell', 'Square Dumbbell', 'Sphere Dumbbell', 'Cross', 'Cross Thin', 'Locator', 'Four Arrows', 'Four Arrows Thin',
+                    'Curved Four Arrows', 'Curved Four Arrows Thin', 'Two Arrows', 'Two Arrows Thin', 'Curved Two Arrows', 'Curved Two Arrows Thin', 'One Arrow',
+                    'One Arrow Thin', 'Circle One Arrow',  'Circle Two Arrows', 'Circle Three Arrows', 'Circle Four Arrows', 'Sphere Four Arrows', 'Gear']
 
     # Control curve CV tuples dictionary.
     cvTuples = {}
 
     # Control curve CV dictionary keys.
     cvTuples['Half Circle'] = [
-        (1.2246467991473532e-16, 1.2246467991473532e-16, -2.0), 
-        (-0.3901806440322564, 1.2011155542966555e-16, -1.9615705608064609), 
-        (-0.7653668647301793, 1.1314261122877003e-16, -1.8477590650225735), 
-        (-1.1111404660392044, 1.0182565992946028e-16, -1.6629392246050905), 
-        (-1.414213562373095, 8.659560562354932e-17, -1.414213562373095), 
-        (-1.6629392246050902, 6.80377307569005e-17, -1.1111404660392044), 
-        (-1.8477590650225733, 4.6865204053262986e-17, -0.7653668647301796), 
-        (-1.9615705608064604, 2.3891673840167793e-17, -0.3901806440322566), 
-        (-1.9999999999999996, 1.4296954280543742e-32, -2.3348698237725095e-16), 
-        (-1.0, -1.0182565992946023e-16, 1.0736898889973645e-06), 
-        (-2.334869823772509e-16, -1.2246467991473525e-16, 4.444297557526511e-06), 
-        (1.0, -1.1314261122876998e-16, 2.9218882460213536e-06), 
-        (1.9999999999999982, -3.1292342698629875e-32, 5.1104273853354e-16), 
-        (1.961570560806459, 2.3891673840167737e-17, -0.39018064403225566), 
-        (1.847759065022572, 4.68652040532629e-17, -0.7653668647301782), 
-        (1.662939224605089, 6.80377307569004e-17, -1.1111404660392028), 
-        (1.4142135623730938, 8.659560562354922e-17, -1.4142135623730931), 
-        (1.1111404660392035, 1.0182565992946014e-16, -1.6629392246050883), 
-        (0.7653668647301792, 1.1314261122876988e-16, -1.847759065022571), 
-        (0.3901806440322567, 1.2011155542966538e-16, -1.9615705608064582), 
+        (1.2246467991473532e-16, 1.2246467991473532e-16, -2.0),
+        (-0.3901806440322564, 1.2011155542966555e-16, -1.9615705608064609),
+        (-0.7653668647301793, 1.1314261122877003e-16, -1.8477590650225735),
+        (-1.1111404660392044, 1.0182565992946028e-16, -1.6629392246050905),
+        (-1.414213562373095, 8.659560562354932e-17, -1.414213562373095),
+        (-1.6629392246050902, 6.80377307569005e-17, -1.1111404660392044),
+        (-1.8477590650225733, 4.6865204053262986e-17, -0.7653668647301796),
+        (-1.9615705608064604, 2.3891673840167793e-17, -0.3901806440322566),
+        (-1.9999999999999996, 1.4296954280543742e-32, -2.3348698237725095e-16),
+        (-1.0, -1.0182565992946023e-16, 1.0736898889973645e-06),
+        (-2.334869823772509e-16, -1.2246467991473525e-16, 4.444297557526511e-06),
+        (1.0, -1.1314261122876998e-16, 2.9218882460213536e-06),
+        (1.9999999999999982, -3.1292342698629875e-32, 5.1104273853354e-16),
+        (1.961570560806459, 2.3891673840167737e-17, -0.39018064403225566),
+        (1.847759065022572, 4.68652040532629e-17, -0.7653668647301782),
+        (1.662939224605089, 6.80377307569004e-17, -1.1111404660392028),
+        (1.4142135623730938, 8.659560562354922e-17, -1.4142135623730931),
+        (1.1111404660392035, 1.0182565992946014e-16, -1.6629392246050883),
+        (0.7653668647301792, 1.1314261122876988e-16, -1.847759065022571),
+        (0.3901806440322567, 1.2011155542966538e-16, -1.9615705608064582),
         (7.330873434585712e-16, 1.2246467991473515e-16, -1.9999999999999973)
     ]
 
