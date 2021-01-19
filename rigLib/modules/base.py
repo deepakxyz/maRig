@@ -31,3 +31,8 @@ def baseControl():
     Control = control_create.Control()
     baseControl = Control.create(scale=0.5, name="Base")
     return baseControl
+
+
+# Creating base structure for the rig
+def BaseStruct():
+    topGrp = mc.group(n=prefix + 'Module_grp', em=1)

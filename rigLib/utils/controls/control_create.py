@@ -1,7 +1,4 @@
 '''
-
-Control Shape Tool made by Deepak Rajan
-
 Create control curves, change control curve colors and replace control curve shapes.
 Change colors on the the shape level to avoid all children of the controls inheriting drawig overrides.
 
@@ -9,6 +6,13 @@ Change colors on the the shape level to avoid all children of the controls inher
 
 import maya.cmds as mc
 from control_shapes import ControlShapes
+
+'''
+Joint orient axis 
+Aim axis = Y
+Up axis = X
+World Up axis = Z
+'''
 
 
 class Control:
