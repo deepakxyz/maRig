@@ -21,15 +21,18 @@ class Control:
     '''
 
     # Create controls
-    def create(self, name="control", type="circle", scale=1.0, suffix="_ctrl", color=21, thickness=1.0, parent=""):
+    def create(self, name="control", type="circle", translateTo="", aimAxis="Y", scale=1.0, suffix="_ctrl", color=21, thickness=1.0, parent=""):
         '''
-        @pram: name, str
-        @pram: type, str
-        @pram: scale, float
-        @pram: suffix, str
-        @pram: color, int
-        @pram: thickness, float
-        @pram: parent, str
+        @param name: str, name of the controller, @default: control
+        @param type: str, shape of the controller, @default: circle
+        @param translateTo: str, snap or move to the selected object
+        @param aimAxis: str, Controler aim axis, @default: "Y"
+        @param scale: float, scale of the controller, @default: 1.0
+        @param suffix: str, contoller suffix, @default: "_ctrl"
+        @param color: int, controller color index, @default: 21
+        @param thickness: float, thickness of the controller, @default: 1
+        @param parent: str, parent of the current locator, @default: None
+        @param return: str, controllerer
 
         '''
         # Create control
@@ -42,11 +45,27 @@ class Control:
 
             # Set scale
             mc.scale(scale, scale, scale, a=True)
+
+        # Change control aimAxis
+        if aimAxis == "Z":
+            mc.setAttr(control[0] + '.rz', 90)
+            mc.makeIdentity(apply=True, t=True, r=True, s=True, n=False, pn=1)
+        elif aimAxis == "X":
+            mc.setAttr(control[0] + '.rx', 90)
+            mc.makeIdentity(apply=True, t=True, r=True, s=True, n=False, pn=1)
+        else:
             mc.makeIdentity(apply=True, t=True, r=True, s=True, n=False, pn=1)
 
         # Set color
         mc.select(control)
-        self.setColorIndex(color)
+        if name.startswith('l_'):
+            color = 22
+            self.setColorIndex(color)
+        elif name.startswith('r_'):
+            color = 23
+            self.setColorIndex(color)
+        else:
+            self.setColorIndex(color)
 
         # Set thickness for the control shapes
         if thickness > 1.0:
@@ -54,10 +73,19 @@ class Control:
             for c in controlShape:
                 mc.setAttr('{0}.lineWidth'.format(c), thickness)
 
+        # Create control offset group
+        controlOffset = mc.group(n=name + "_offset_grp", em=1)
+        mc.parent(control, controlOffset)
+
         # Set parent object
         if parent:
             if mc.objExists(parent):
-                mc.parent(control, parent)
+                mc.parent(controlOffset, parent)
+
+        # Translate and rotate the controller to the joint
+        if mc.objExists(translateTo):
+            mc.delete(mc.pointConstraint(translateTo, controlOffset))
+            mc.delete(mc.orientConstraint(translateTo, controlOffset))
 
         # returns control object
         return control[0]
