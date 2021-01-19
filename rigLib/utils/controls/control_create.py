@@ -17,9 +17,15 @@ class Control:
     '''
 
     # Create controls
-    def create(self, name="control", type="circle", scale=1.0, suffix="_ctrl", color=1, thickness=1.0, parent=""):
+    def create(self, name="control", type="circle", scale=1.0, suffix="_ctrl", color=21, thickness=1.0, parent=""):
         '''
         @pram: name, str
+        @pram: type, str
+        @pram: scale, float
+        @pram: suffix, str
+        @pram: color, int
+        @pram: thickness, float
+        @pram: parent, str
 
         '''
         # Create control
