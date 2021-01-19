@@ -10,12 +10,21 @@ class Base():
     class for building rig base control
     """
 
-    def __init__(self, name="Base", scale=0.6, thickness=1.2):
+    def __init__(self,
+                 characterName="new",
+                 scale=0.6,
+                 ):
+        '''
+        @pram chracterName: str, character name
+        @pram scale: float, general scale of the rig
+        @return: None
+        '''
+        # init control module
         Control = control_create.Control()
 
         # base control create
         self.baseControl = Control.create(
-            scale=scale, name=name, thickness=thickness)
+            scale=scale, name=characterName, thickness=1.2)
 
 
 def baseControl():
