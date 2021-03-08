@@ -11,12 +11,24 @@
                 -57.02343047876362
             ],
             "/hand": [
-                -679.1892480378565,
-                -197.74545213941343
+                -834.0628942472428,
+                -158.82848463038815
             ],
             "/hand2": [
-                -201.72437946370007,
-                -32.19192706258674
+                208.08664259927798,
+                300.216606498195
+            ],
+            "/hand2/IK_FK_blend/FK_ctrl/IK_ctrl/IK_FK_switcher": [
+                0.0,
+                0.0
+            ],
+            "/l_hand": [
+                -236.878778723777,
+                60.377291542897055
+            ],
+            "/r_hand": [
+                177.1119133574008,
+                64.33212996389892
             ]
         },
         "collapse": {
@@ -27,7 +39,11 @@
             "/hand/IK_FK_blend/FK_ctrl/IK_ctrl": false,
             "/hand/IK_FK_blend/FK_ctrl/IK_ctrl/IK_FK_switcher": true,
             "/hand/IK_FK_blend/FK_ctrl/IK_ctrl/IK_PoleV_ctrl": false,
-            "/hand/IK_FK_blend/FK_ctrl/IK_ctrl/IK_PoleV_ctrl/IK_effector": true
+            "/hand/IK_FK_blend/FK_ctrl/IK_ctrl/IK_PoleV_ctrl/IK_effector": true,
+            "/hand2/IK_FK_blend/FK_ctrl/IK_ctrl/IK_FK_switcher": true,
+            "/l_hand": false,
+            "/r_hand": false,
+            "/r_hand/IK_FK_blend/FK_ctrl/IK_ctrl/IK_FK_switcher": true
         }
     },
     "nodes": {
@@ -42,7 +58,7 @@
             ]
         },
         "/hand": {
-            "start_point": true,
+            "start_point": false,
             "child_order": [
                 "IK_FK_blend"
             ],
@@ -181,20 +197,91 @@
             ]
         },
         "/hand/IK_FK_blend/FK_ctrl/IK_ctrl/IK_FK_switcher": {
+            "attrs": {
+                "aboveJoint": {
+                    "type": "str",
+                    "value": "\"l_wrist\""
+                },
+                "attribute_name": {
+                    "type": "raw",
+                    "value": "'IK_FK_Switch\""
+                },
+                "loc": {
+                    "type": "list",
+                    "value": "[-0.104,0,0.108]"
+                },
+                "switch_name": {
+                    "type": "str",
+                    "value": "\"l_hand_switch\""
+                }
+            },
             "code": [
-                "def ik_fk_blender_ctrl():",
-                "    loc = [-0.104,0,0.108]",
-                "    ph = placeHolder(name=\"swither\",joint=\"l_wrist\",loc=loc,type=\"Sphere\",aimAxis=\"Y\",scale=0.01,color=23,parent=\"\",constraintType=\"point\")",
+                "def ik_fk_blender_set(constraint_list,joints,name,suffix,joint,loc,type,scale,color,attribName):",
+                "    #switch node",
+                "    switch = placeHolder(name=name,suffix=suffix,joint=joint,loc=loc,type=type,aimAxis=\"Y\",scale=scale,color=color,parent=\"\",constraintType=\"point\")",
                 "    ",
-                "",
                 "    # create a IK_FK_blend attribute",
-                "    mc.addAttr(ph[1],keyable=True,longName=\"IK_FK_Swith\", attributeType=\"double\", min=0, max=1, dv=0)",
+                "    mc.addAttr(switch[1],keyable=True,longName=attribName, attributeType=\"double\", min=0, max=1, dv=0)",
+                "    ",
+                "    # create reverse node",
+                "    reverse_node = mc.createNode(\"reverse\")",
+                "    ",
                 "",
                 "    ",
-                "ik_fk_blender_ctrl()",
+                "    # connect Reverse",
+                "    mc.connectAttr(switch[1]+\".\"+attribName,reverse_node+\".input.inputX\")",
+                "    ",
+                "    i = 0",
+                "    for constraint in constraint_list:",
+                "        mc.connectAttr(switch[1] + \".\" + attribName, constraint + \".\"+ joints[i]+ \"_FKW1\")",
+                "        # print(switch[1] + \".\" + attribName, constraint + \".\"+ joints[i]+ \"_FKW1\")",
+                "        mc.connectAttr(reverse_node + \".output.outputX\", constraint + \".\" + joints[i] + \"_IKW0\")",
+                "        # print(switch[1]+\".IK_FK_Switch\",constraint + \".\"+ joints[i]+ \"_FKW1\")",
+                "        i = i + 1",
+                "",
+                "    ",
+                "ik_fk_blender_set(constraint_list=${constraint_list},joints=${joint_list},name=${switch_name},suffix=\"_ctrl\",joint=${aboveJoint},loc=${loc},type=\"Sphere\",scale=0.01,color=24,attribName=${switch_name})",
                 "",
                 ""
             ]
+        },
+        "/l_hand": {
+            "start_point": true,
+            "instance": "/hand",
+            "child_order": [
+                "IK_FK_blend"
+            ]
+        },
+        "/l_hand/IK_FK_blend": {
+            "start_point": true
+        },
+        "/l_hand/IK_FK_blend/FK_ctrl": {
+            "start_point": true
+        },
+        "/l_hand/IK_FK_blend/FK_ctrl/IK_ctrl": {
+            "start_point": true
+        },
+        "/l_hand/IK_FK_blend/FK_ctrl/IK_ctrl/IK_FK_switcher": {
+            "start_point": true
+        },
+        "/r_hand": {
+            "instance": "/hand",
+            "execute_in": "/l_hand",
+            "code": [
+                "# joints = [\"l_humerus\", \"l_radius\",\"l_wrist\"]",
+                "joints = [\"r_humerus\",\"r_radius\",\"r_wrist\"]",
+                "self.joint_list = joints"
+            ]
+        },
+        "/r_hand/IK_FK_blend/FK_ctrl/IK_ctrl/IK_FK_switcher": {
+            "attrs": {
+                "aboveJoint": {
+                    "value": "\"r_wrist\""
+                },
+                "switch_name": {
+                    "value": "\"r_hand_switch\""
+                }
+            }
         }
     }
 }
