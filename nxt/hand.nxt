@@ -6,16 +6,28 @@
     "solo": false,
     "meta_data": {
         "positions": {
+            "/IK_ctrl": [
+                -283.2325693374954,
+                -57.02343047876362
+            ],
             "/hand": [
-                -449.0,
-                -114.0
+                -679.1892480378565,
+                -197.74545213941343
+            ],
+            "/hand2": [
+                -201.72437946370007,
+                -32.19192706258674
             ]
         },
         "collapse": {
+            "/IK_ctrl": false,
             "/hand": false,
             "/hand/IK_FK_blend": false,
-            "/hand/IK_FK_blend/FK_control": false,
-            "/hand/IK_FK_blend/FK_control/IK_control": true
+            "/hand/IK_FK_blend/FK_ctrl": false,
+            "/hand/IK_FK_blend/FK_ctrl/IK_ctrl": false,
+            "/hand/IK_FK_blend/FK_ctrl/IK_ctrl/IK_FK_switcher": true,
+            "/hand/IK_FK_blend/FK_ctrl/IK_ctrl/IK_PoleV_ctrl": false,
+            "/hand/IK_FK_blend/FK_ctrl/IK_ctrl/IK_PoleV_ctrl/IK_effector": true
         }
     },
     "nodes": {
@@ -24,6 +36,7 @@
                 "import maya.cmds as mc",
                 "from pymel.all import mel",
                 "from utils.control_create import Control",
+                "from utils.placeholder_loc import placeHolder",
                 "control = Control()",
                 ""
             ]
@@ -38,13 +51,17 @@
             },
             "code": [
                 "joints = [\"l_humerus\", \"l_radius\",\"l_wrist\"]",
+                "# joints = [\"r_humerus\",\"r_radius\",\"r_wrist\"]",
                 "self.joint_list = joints"
             ]
         },
         "/hand/IK_FK_blend": {
             "child_order": [
-                "FK_control"
+                "FK_ctrl"
             ],
+            "attrs": {
+                "constraint_list": {}
+            },
             "code": [
                 "# Hand Util",
                 "def hand(joints):",
@@ -54,15 +71,15 @@
                 "        mel.duplicateJoints(suffix,joints)",
                 "    ",
                 "    # IK FK blend",
-                "    mel.ik_fk_blend(joints)",
-                "",
+                "    list = mel.ik_fk_blend(joints)",
+                "    self.constraint_list=list",
                 "",
                 "hand(self.joint_list)"
             ]
         },
-        "/hand/IK_FK_blend/FK_control": {
+        "/hand/IK_FK_blend/FK_ctrl": {
             "child_order": [
-                "IK_control"
+                "IK_ctrl"
             ],
             "attrs": {
                 "color": {
@@ -81,11 +98,12 @@
                 "    ctrl_names = []",
                 "    for joint in joints:",
                 "        FK_joint = joint + \"_FK\"",
-                "        ctrl_offset_grp_name = FK_joint + \"_offset_grp\"",
-                "        ctrl_offset_grp_names.append(ctrl_offset_grp_name)",
                 "        FK_control = control.create(name=joint + \"_FK\",translateTo=joint,scale=${scale},color=${color})",
-                "        ctrl_names.append(FK_control)",
-                "        mc.parentConstraint(FK_control, FK_joint)",
+                "        ctrl_names.append(FK_control[1])     ",
+                "        ctrl_offset_grp_names.append(FK_control[0])",
+                "",
+                "        ",
+                "        mc.parentConstraint(FK_control[1], FK_joint)",
                 "        ",
                 "    # Parent ",
                 "    # Humerus > Radius > Wrist",
@@ -102,6 +120,81 @@
                 ""
             ]
         },
-        "/hand/IK_FK_blend/FK_control/IK_control": {}
+        "/hand/IK_FK_blend/FK_ctrl/IK_ctrl": {
+            "child_order": [
+                "IK_FK_switcher"
+            ],
+            "code": [
+                "# create IK control",
+                "def IKCtrl(joints):",
+                "    # IK control",
+                "    IK_control_joint_name = joints[2] + \"_IK\"",
+                "    IK_control = control.create(name=IK_control_joint_name,translateTo=joints[2],scale=0.05,type=\"Four Arrows\")",
+                "    return IK_control",
+                "",
+                "# create pole vector control with offset",
+                "def poleVectorCtrl(joint):",
+                "    # Create Pole Vector location using Locators.",
+                "    main_poleVector = mc.spaceLocator(n=\"main_loc\",p=[0,0,0])",
+                "    sub_locator = mc.spaceLocator(n=\"sub_loc\")",
+                "    # move -r -os -wd -1.088376 0 0 ;",
+                "    if joint.startswith('r_'):",
+                "        x = 0.365",
+                "        aimAxis = \"-Z\"",
+                "    elif joint.startswith(\"l_\"):",
+                "        x = -0.365",
+                "        aimAxis = \"Z\"",
+                "        ",
+                "    mc.move(x,0,0, sub_locator,wd=True)",
+                "    mc.parent(sub_locator, main_poleVector)",
+                "    temp = mc.parentConstraint(joint, main_poleVector)",
+                "",
+                "    PV_control = control.create(name=joint + \"_pv\",aimAxis=aimAxis,translateTo=joint,scale=0.02,type=\"Sphere Pin\")",
+                "    mc.delete(mc.parentConstraint(sub_locator,PV_control[0]))",
+                "    mc.delete(temp)",
+                "    mc.delete(main_poleVector)",
+                "    ",
+                "    return PV_control",
+                "",
+                "",
+                "# create IK effector",
+                "def armIKEffector(joints):",
+                "    #  set IK effector",
+                "    sj = joints[0] + \"_IK\"",
+                "    ee = joints[2]  + \"_IK\"",
+                "    ikHandle = mc.ikHandle(n=sj + \"_Handle\",sj=sj,ee=ee,sol=\"ikRPsolver\")",
+                "    mc.parent(ikHandle[0],ee+ \"_ctrl\")",
+                "    return ikHandle[0]",
+                "",
+                "",
+                "# armIK",
+                "def armIK(joints):",
+                "    ikControl = IKCtrl(joints)",
+                "    pole_v_ctrl = poleVectorCtrl(joints[1])",
+                "    ik_handle = armIKEffector(joints)",
+                "    # create pole vector control",
+                "    mc.poleVectorConstraint(pole_v_ctrl,ik_handle)",
+                "    ",
+                "    ",
+                "armIK(self.joint_list)",
+                ""
+            ]
+        },
+        "/hand/IK_FK_blend/FK_ctrl/IK_ctrl/IK_FK_switcher": {
+            "code": [
+                "def ik_fk_blender_ctrl():",
+                "    loc = [-0.104,0,0.108]",
+                "    ph = placeHolder(name=\"swither\",joint=\"l_wrist\",loc=loc,type=\"Sphere\",aimAxis=\"Y\",scale=0.01,color=23,parent=\"\",constraintType=\"point\")",
+                "    ",
+                "",
+                "    # create a IK_FK_blend attribute",
+                "    mc.addAttr(ph[1],keyable=True,longName=\"IK_FK_Swith\", attributeType=\"double\", min=0, max=1, dv=0)",
+                "",
+                "    ",
+                "ik_fk_blender_ctrl()",
+                "",
+                ""
+            ]
+        }
     }
 }

@@ -21,7 +21,7 @@ class Control:
     '''
 
     # reload test command
-    print("Reloaded 7")
+    print("Reloaded 10")
 
     # Create controls
     def create(self, name="control", type="circle", translateTo="", aimAxis="Y", scale=1.0, suffix="_ctrl", color=21, thickness=1.0, parent=""
@@ -56,22 +56,32 @@ class Control:
         if aimAxis == "Z":
             mc.setAttr(control + '.rz', 90)
             mc.makeIdentity(apply=True, t=True, r=True, s=True, n=False, pn=1)
+        elif aimAxis == "-Z":
+            mc.setAttr(control + '.rz', -90)
+            mc.makeIdentity(apply=True, t=True, r=True, s=True, n=False, pn=1)
         elif aimAxis == "X":
             mc.setAttr(control + '.rx', 90)
+            mc.makeIdentity(apply=True, t=True, r=True, s=True, n=False, pn=1)
+        elif aimAxis == "-X":
+            mc.setAttr(control + '.rx', -90)
+            mc.makeIdentity(apply=True, t=True, r=True, s=True, n=False, pn=1)
+        elif aimAxis == "-Y":
+            mc.setAttr(control + '.ry', -90)
             mc.makeIdentity(apply=True, t=True, r=True, s=True, n=False, pn=1)
         else:
             mc.makeIdentity(apply=True, t=True, r=True, s=True, n=False, pn=1)
 
         # Set color
         mc.select(control)
-        if name.startswith('l_'):
-            color = 20
-            self.setColorIndex(color)
-        elif name.startswith('r_'):
-            color = 23
-            self.setColorIndex(color)
-        else:
-            self.setColorIndex(color)
+
+        # if name.startswith('l_') and color == 21:
+        #     color = 20
+        #     self.setColorIndex(color)
+        # elif name.startswith('r_') and color == 21:
+        #     color = 23
+        #     self.setColorIndex(color)
+        # else:
+        self.setColorIndex(color)
 
         # Set thickness for the control shapes
         if thickness > 1.0:

@@ -37,15 +37,17 @@ global proc duplicateJoints(string $suffix, string $joints[]){
     }
 }
 
-
-// IK FK blend
-global proc ik_fk_blend(string $joints[]){
+// IK FK blend with return value
+global proc string[] ik_fk_blend(string $joints[]){
+    string $constraints[];
     for ($joint in $joints){
         string $IK_joint = $joint + "_IK";
         string $FK_joint = $joint + "_FK";
         string $joint_name = $joint + "_IF_FK_constraint";
     
-        parentConstraint -n $joint_name $IK_joint $FK_joint $joint;
+        string $constraint[] = `parentConstraint -n $joint_name $IK_joint $FK_joint $joint`;
+        $constraints[size($constraints)] = $constraint[0];
+    
     }
+    return $constraints;
 }
-
