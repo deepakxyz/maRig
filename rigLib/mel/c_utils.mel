@@ -1,0 +1,131 @@
+global proc lockChannels() {
+	string $channels[] = {"translateX", "translateY", "translateZ", "rotateX", "rotateY", "rotateZ", "scaleX", "scaleY", "scaleZ"};
+	string $sel[] = `ls -sl`;
+	for ($node in $sel) {
+		for ($channel in $channels) {
+			if (`attributeExists $channel $node`) {
+				setAttr -cb 0 -l 1 -k 0 ($node+"."+$channel);
+			}
+		}
+	}
+}//eop
+
+
+global proc unlockChannels() {
+	string $channels[] = {"translateX", "translateY", "translateZ", "rotateX", "rotateY", "rotateZ", "scaleX", "scaleY", "scaleZ","visibility"};
+	string $sel[] = `ls -sl`;
+	for ($node in $sel) {
+		for ($channel in $channels) {
+			if (`attributeExists $channel $node`) {
+				setAttr -k 1 -l 0 ($node+"."+$channel);
+			}
+		}
+	}
+}//eop
+
+proc alignAtoB(string $objA, string $objB) {
+	delete `pointConstraint -offset 0 0 0 -weight 1 $objB $objA`;
+	delete `orientConstraint -offset 0 0 0 -weight 1 $objB $objA`;
+	select $objA;                                          
+	makeIdentity -apply true -t 1 -r 1 -s 1 -n 0;
+	select -cl;
+}//eop
+
+
+proc lockUnlockJointOrientRotateAxis(string $objects[], int $isLocked) {
+	string $attrs[] = {"jointOrientX", "jointOrientY", "jointOrientZ", "rotateAxisX", "rotateAxisY", "rotateAxisZ"};
+	for ($node in $objects) {
+		for ($attr in $attrs) {
+			if (`nodeType $node` == "joint") {
+				setAttr -l $isLocked ($node+"."+$attr);
+			}
+		}
+	}
+}//eop
+
+
+
+proc hookUpJoint(string $joint, string $ctrlJoint) {
+	pointConstraint -offset 0 0 0 -weight 1 $ctrlJoint $joint;
+	orientConstraint -offset 0 0 0 -weight 1 $ctrlJoint $joint;
+	connectAttr ($ctrlJoint+".scaleX") ($joint+".scaleX");
+	connectAttr ($ctrlJoint+".scaleY") ($joint+".scaleY");
+	connectAttr ($ctrlJoint+".scaleZ") ($joint+".scaleZ");
+	select $joint;
+	lockChannels();
+	if (!`attributeExists "controlJoint" $joint`) {
+		addAttr -ln "controlJoint" -dt "string" $joint;
+	}
+	if (!`attributeExists "isHookedUp" $joint`) {
+		addAttr -ln "isHookedUp" -at bool $joint;
+	}
+	string $incoming[] = `listConnections -s 1 -d 0 -scn 1 -p 1 ($joint+".controlJoint")`;
+	if(size($incoming) > 0) {
+		disconnectAttr $incoming[0] ($joint+".controlJoint");	
+	}
+	connectAttr -f ($ctrlJoint+".message") ($joint+".controlJoint");
+	setAttr -l 0 ($joint+".isHookedUp");
+	setAttr ($joint+".isHookedUp") true;
+	setAttr -l 1 ($joint+".isHookedUp");
+}//eop
+
+
+global proc detachFromControlRig() {
+	string $sel[] = `ls -sl`;
+	string $jointsTransforms[] = `ls -type "joint" -type "transform"`;
+	select $jointsTransforms;
+	disconnectJointFromControl();
+	select $sel;
+}//eop
+
+
+global proc attachToControlRig() {
+	string $sel[] = `ls -sl`;
+	string $jointsTransforms[] = `ls -type "joint" -type "transform"`;
+	select $jointsTransforms;
+	connectJointToControl();
+	select $sel;
+}//eop
+
+
+
+proc disconnectJointFromControl() {
+	string $sel[] = `ls -type "joint" -type "transform" -sl`;
+	for ($node in $sel) {
+		if (`attributeExists "isHookedUp" $node`) {
+			setAttr -l 0 ($node+".isHookedUp");
+			setAttr ($node+".isHookedUp") false;
+			setAttr -l 1 ($node+".isHookedUp");
+			
+			select $node;
+			unlockChannels();
+			select -cl;
+			string $pcon[] = `listRelatives -c -type "pointConstraint" $node`;
+			if (size($pcon) > 0) { delete $pcon; }
+			string $oricon[] =  `listRelatives -c -type "orientConstraint" $node`;
+			if (size($oricon) > 0) { delete $oricon; }
+			string $scaleXInput[] = `listConnections -s 1 -d 0 -scn 1 -p 1 ($node+".scaleX")`;
+			string $scaleYInput[] = `listConnections -s 1 -d 0 -scn 1 -p 1 ($node+".scaleY")`;
+			string $scaleZInput[] = `listConnections -s 1 -d 0 -scn 1 -p 1 ($node+".scaleZ")`;
+			if (size($scaleXInput)>0) { disconnectAttr $scaleXInput[0] ($node+".scaleX"); }
+			if (size($scaleYInput)>0) { disconnectAttr $scaleYInput[0] ($node+".scaleY"); }
+			if (size($scaleZInput)>0) { disconnectAttr $scaleZInput[0] ($node+".scaleZ"); }
+		}
+	}
+}//eop
+
+proc connectJointToControl() {
+	string $sel[] = `ls -type "joint" -type "transform" -sl`;
+	for ($node in $sel) {
+		if(`attributeExists "controlJoint" $node` && `attributeExists "isHookedUp" $node`) {
+			if (!`getAttr ($node+".isHookedUp")`) {
+				string $incoming[] = `listConnections -s 1 -d 0 -scn 1 ($node+".controlJoint")`;
+				if (size($incoming) > 0) {
+					if ("joint" == `nodeType $incoming[0]` || "transform" == `nodeType $incoming[0]`) {
+						hookUpJoint($node, $incoming[0]);
+					}
+				}
+			}
+		}
+	}
+}//eop

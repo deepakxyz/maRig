@@ -1,0 +1,107 @@
+{
+    "version": "1.17",
+    "alias": "hand",
+    "color": "#8d3569",
+    "mute": false,
+    "solo": false,
+    "meta_data": {
+        "positions": {
+            "/hand": [
+                -449.0,
+                -114.0
+            ]
+        },
+        "collapse": {
+            "/hand": false,
+            "/hand/IK_FK_blend": false,
+            "/hand/IK_FK_blend/FK_control": false,
+            "/hand/IK_FK_blend/FK_control/IK_control": true
+        }
+    },
+    "nodes": {
+        "/": {
+            "code": [
+                "import maya.cmds as mc",
+                "from pymel.all import mel",
+                "from utils.control_create import Control",
+                "control = Control()",
+                ""
+            ]
+        },
+        "/hand": {
+            "start_point": true,
+            "child_order": [
+                "IK_FK_blend"
+            ],
+            "attrs": {
+                "joint_list": {}
+            },
+            "code": [
+                "joints = [\"l_humerus\", \"l_radius\",\"l_wrist\"]",
+                "self.joint_list = joints"
+            ]
+        },
+        "/hand/IK_FK_blend": {
+            "child_order": [
+                "FK_control"
+            ],
+            "code": [
+                "# Hand Util",
+                "def hand(joints):",
+                "    # duplicate joints ",
+                "    suffixs = [\"_IK\",\"_FK\"]",
+                "    for suffix in suffixs:",
+                "        mel.duplicateJoints(suffix,joints)",
+                "    ",
+                "    # IK FK blend",
+                "    mel.ik_fk_blend(joints)",
+                "",
+                "",
+                "hand(self.joint_list)"
+            ]
+        },
+        "/hand/IK_FK_blend/FK_control": {
+            "child_order": [
+                "IK_control"
+            ],
+            "attrs": {
+                "color": {
+                    "type": "int",
+                    "value": "8"
+                },
+                "scale": {
+                    "type": "float",
+                    "value": "0.1"
+                }
+            },
+            "code": [
+                "def handFKCtrls(joints):",
+                "    # FK control",
+                "    ctrl_offset_grp_names = []",
+                "    ctrl_names = []",
+                "    for joint in joints:",
+                "        FK_joint = joint + \"_FK\"",
+                "        ctrl_offset_grp_name = FK_joint + \"_offset_grp\"",
+                "        ctrl_offset_grp_names.append(ctrl_offset_grp_name)",
+                "        FK_control = control.create(name=joint + \"_FK\",translateTo=joint,scale=${scale},color=${color})",
+                "        ctrl_names.append(FK_control)",
+                "        mc.parentConstraint(FK_control, FK_joint)",
+                "        ",
+                "    # Parent ",
+                "    # Humerus > Radius > Wrist",
+                "    for i in range(len(ctrl_names)):",
+                "        try:",
+                "            mc.parent( ctrl_offset_grp_names[i + 1], ctrl_names[i])",
+                "        except:",
+                "            pass",
+                "    ",
+                "        ",
+                "        ",
+                "        ",
+                "handFKCtrls(self.joint_list)",
+                ""
+            ]
+        },
+        "/hand/IK_FK_blend/FK_control/IK_control": {}
+    }
+}

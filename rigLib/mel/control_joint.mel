@@ -1,0 +1,45 @@
+global proc makeControlJoint() {
+	string $joints[] = `ls -type "joint" -type "transform" -sl -l`;
+	for ($joint in $joints) {
+		select $joint;
+		unlockChannels();
+		string $buffer[];
+		tokenize $joint "|" $buffer;
+		string $jointName = $buffer[size($buffer)-1];
+		string $ctrlJoint = `createNode "joint" -n ($jointName+"_CTRL")`;
+		alignAtoB($ctrlJoint, $joint);
+		
+		//keep trying to find a rig parent until there isn't a parent transform for the joint
+		//priority to the suffix "_RIG" for rig attachment joints vs. control joints
+		string $jointParent[] = `listRelatives -p $joint`;
+		int $stop = 0;
+		while (`objExists $jointParent[0]` && $stop == 0) {
+			//print ("The joint parent is "+$jointParent[0]+"\n");
+			if (`objExists ($jointParent[0]+"_RIG")`) {
+				parent $ctrlJoint ($jointParent[0]+"_RIG");
+				$stop = 1;
+			}
+			else if (`objExists ($jointParent[0]+"_CTRL")`) {
+				parent $ctrlJoint ($jointParent[0]+"_CTRL");
+				$stop = 1;
+			}
+			$jointParent = `listRelatives -p $jointParent[0]`;
+		}
+		
+		//if joint is offset from parent - create new joint parent to zero joint translation
+		float $trans[] = `xform -q -os -t $ctrlJoint`;
+		float $rot[] = `xform -q -os -ro $ctrlJoint`;
+		if (abs($trans[0] + $trans[1] + $trans[2] + $rot[0] + $rot[1] + $rot[2]) > 0.0001) {
+			string $ctrlJointGrp = `createNode "joint"`;
+			alignAtoB($ctrlJointGrp, $ctrlJoint);
+			string $ctrlParent[] = `listRelatives -p $ctrlJoint`;
+			if (`objExists $ctrlParent[0]`) parent $ctrlJointGrp $ctrlParent[0];
+			parent $ctrlJoint $ctrlJointGrp;
+			$ctrlJointGrp = `rename $ctrlJointGrp ($jointName+"_grp")`;
+			$ctrlGrp = $ctrlJointGrp;
+		}
+		lockUnlockJointOrientRotateAxis({$ctrlJoint}, 1);
+		//connect the joints
+		hookUpJoint($joint, $ctrlJoint);
+	}
+}//eop
