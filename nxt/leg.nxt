@@ -1,0 +1,132 @@
+{
+    "version": "1.17",
+    "alias": "leg",
+    "color": "#991c24",
+    "mute": false,
+    "solo": false,
+    "meta_data": {
+        "positions": {
+            "/IK_FK_blend2": [
+                -554.0628942472428,
+                -138.82848463038815
+            ],
+            "/d": [
+                -33.0,
+                -180.0
+            ],
+            "/hand": [
+                -882.5040700634605,
+                121.24838527828413
+            ],
+            "/leg": [
+                -504.0,
+                -251.0
+            ],
+            "/node": [
+                -34.0,
+                -35.0
+            ]
+        },
+        "collapse": {
+            "/leg": false,
+            "/leg/IK_FK_duplicate_blend": false,
+            "/node": false
+        }
+    },
+    "nodes": {
+        "/": {
+            "code": [
+                "import maya.cmds as mc",
+                "from pymel.all import mel",
+                "",
+                "from rigLib.utils.control_create import Control    ",
+                "from rigLib.utils.placeholder_loc import placeHolder",
+                "",
+                "control = Control()",
+                ""
+            ]
+        },
+        "/hand": {
+            "child_order": [
+                "IK_FK_blend2"
+            ],
+            "attrs": {
+                "joint_list": {}
+            },
+            "code": [
+                "joints = [\"l_hip\", \"l_knee\",\"l_foot\"]",
+                "# joints = [\"r_humerus\",\"r_radius\",\"r_wrist\"]",
+                "self.joint_list = joints"
+            ]
+        },
+        "/hand/IK_FK_blend2": {
+            "instance": "/arm/IK_FK_blend"
+        },
+        "/leg": {
+            "child_order": [
+                "IK_FK_duplicate_blend"
+            ],
+            "attrs": {
+                "joint_list": {
+                    "type": "list",
+                    "value": "[\"l_hip\",\"l_knee\",\"l_foot\"]"
+                }
+            },
+            "code": [
+                "STAGE.joints = ${joint_list}"
+            ]
+        },
+        "/leg/IK_FK_duplicate_blend": {
+            "child_order": [
+                "FK_control"
+            ],
+            "code": [
+                "# Dulicate for IK and FK and add parent constraint",
+                "def ik_fk_duplicate(joints):",
+                "    # duplicate joints ",
+                "    suffixs = [\"_IK\",\"_FK\"]",
+                "    for suffix in suffixs:",
+                "        mel.duplicateJoints(suffix,joints)",
+                "    ",
+                "    # IK FK blend",
+                "    list = mel.ik_fk_blend(joints)",
+                "    self.constraint_list=list",
+                "",
+                "ik_fk_duplicate(self.joint_list)"
+            ]
+        },
+        "/leg/IK_FK_duplicate_blend/FK_control": {
+            "code": [
+                "def handFKCtrls(joints):",
+                "    # FK control",
+                "    ctrl_offset_grp_names = []",
+                "    ctrl_names = []",
+                "    for joint in joints:",
+                "        FK_joint = joint + \"_FK\"",
+                "        FK_control = control.create(name=joint + \"_FK\",translateTo=joint,scale=${scale},color=${color})",
+                "        ctrl_names.append(FK_control[1])     ",
+                "        ctrl_offset_grp_names.append(FK_control[0])",
+                "",
+                "        ",
+                "        mc.parentConstraint(FK_control[1], FK_joint)",
+                "        ",
+                "    # Parent ",
+                "    # Humerus > Radius > Wrist",
+                "    for i in range(len(ctrl_names)):",
+                "        try:",
+                "            mc.parent( ctrl_offset_grp_names[i + 1], ctrl_names[i])",
+                "        except:",
+                "            pass",
+                "    ",
+                "    # return offset group and control",
+                "    output = [ctrl_offset_grp_names,ctrl_names]",
+                "    return output",
+                "        ",
+                "# Run the func and store the data.",
+                "self.FK_grps = handFKCtrls(self.joint_list)",
+                "",
+                ""
+            ]
+        }
+    }
+}

@@ -8,10 +8,11 @@ proc alignAtoB(string $objA, string $objB) {
 }//eop
 
 
+
 // Duplicate joints from selection
 // Make the selection from parent to child.
-global proc duplicateJoints(string $suffix, string $joints[]){
-
+global proc string duplicateJoints(string $suffix, string $joints[]){
+    string $output;
     // string $joints[] = `ls -type "joint" -type "transform" -sl -l`;
     for ($joint in $joints){
         select $joint;
@@ -20,6 +21,7 @@ global proc duplicateJoints(string $suffix, string $joints[]){
         string $jointName = $buffer[size($buffer)-1];
         // create new joint node
         string $duplicateJoint = `createNode "joint" -n ($jointName + $suffix)`;
+        $output = $duplicateJoint;
         alignAtoB($duplicateJoint, $joint);
         
         
@@ -35,7 +37,10 @@ global proc duplicateJoints(string $suffix, string $joints[]){
 			$jointParent = `listRelatives -p $jointParent[0]`;
 		}
     }
+    return $output;
 }
+
+
 
 // IK FK blend with return value
 global proc string[] ik_fk_blend(string $joints[]){
@@ -51,3 +56,29 @@ global proc string[] ik_fk_blend(string $joints[]){
     }
     return $constraints;
 }
+
+// Lock channel from selection
+global proc lockChannels() {
+	string $channels[] = {"translateX", "translateY", "translateZ", "rotateX", "rotateY", "rotateZ", "scaleX", "scaleY", "scaleZ"};
+	string $sel[] = `ls -sl`;
+	for ($node in $sel) {
+		for ($channel in $channels) {
+			if (`attributeExists $channel $node`) {
+				setAttr -cb 0 -l 1 -k 0 ($node+"."+$channel);
+			}
+		}
+	}
+}//eop
+
+// Lock channel from given list
+global proc lockChannelsList(string $sel[]) {
+	string $channels[] = {"translateX", "translateY", "translateZ", "rotateX", "rotateY", "rotateZ", "scaleX", "scaleY", "scaleZ"};
+	for ($node in $sel) {
+		for ($channel in $channels) {
+			if (`attributeExists $channel $node`) {
+				setAttr -cb 0 -l 1 -k 0 ($node+"."+$channel);
+			}
+		}
+	}
+}//eop
+
