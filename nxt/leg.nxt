@@ -19,18 +19,20 @@
                 121.24838527828413
             ],
             "/leg": [
-                -504.0,
-                -251.0
+                207.85213614351017,
+                386.59223338887466
             ],
             "/node": [
-                -34.0,
-                -35.0
+                -152.03252032520325,
+                -225.36585365853657
             ]
         },
         "collapse": {
             "/leg": false,
             "/leg/IK_FK_duplicate_blend": false,
-            "/node": false
+            "/leg/IK_FK_duplicate_blend/FK_controls": false,
+            "/leg/IK_FK_duplicate_blend/FK_controls/IK_controls": true,
+            "/node": true
         }
     },
     "nodes": {
@@ -46,69 +48,86 @@
                 ""
             ]
         },
-        "/hand": {
-            "child_order": [
-                "IK_FK_blend2"
-            ],
-            "attrs": {
-                "joint_list": {}
-            },
-            "code": [
-                "joints = [\"l_hip\", \"l_knee\",\"l_foot\"]",
-                "# joints = [\"r_humerus\",\"r_radius\",\"r_wrist\"]",
-                "self.joint_list = joints"
-            ]
-        },
-        "/hand/IK_FK_blend2": {
-            "instance": "/arm/IK_FK_blend"
-        },
         "/leg": {
+            "start_point": true,
             "child_order": [
                 "IK_FK_duplicate_blend"
             ],
             "attrs": {
-                "joint_list": {
+                "joints": {
                     "type": "list",
-                    "value": "[\"l_hip\",\"l_knee\",\"l_foot\"]"
+                    "value": "[\"l_hip\",'l_knee','l_foot',\"l_toes\",\"l_toes_end\"]"
                 }
             },
             "code": [
-                "STAGE.joints = ${joint_list}"
+                "STAGE.joints = [\"l_hip\",'l_knee','l_foot',\"l_toes\",\"l_toes_end\"]",
+                ""
             ]
         },
         "/leg/IK_FK_duplicate_blend": {
             "child_order": [
-                "FK_control"
+                "FK_controls"
             ],
+            "enabled": true,
+            "attrs": {
+                "FK_joints": {},
+                "IK_FK_constraints": {},
+                "IK_joints": {}
+            },
             "code": [
                 "# Dulicate for IK and FK and add parent constraint",
-                "def ik_fk_duplicate(joints):",
-                "    # duplicate joints ",
-                "    suffixs = [\"_IK\",\"_FK\"]",
-                "    for suffix in suffixs:",
-                "        mel.duplicateJoints(suffix,joints)",
+                "def ik_fk_duplicate_blend(joints):",
+                "    ",
+                "    #IK Joints",
+                "    ",
+                "    IK_joints = mel.duplicateJoints(\"_IK\",joints)",
+                "    self.IK_joints = IK_joints",
+                "",
+                "",
+                "    ",
+                "    #FK Joints",
+                "    FK_joints = mel.duplicateJoints(\"_FK\",joints)",
+                "    self.FK_joints = FK_joints",
+                "",
                 "    ",
                 "    # IK FK blend",
-                "    list = mel.ik_fk_blend(joints)",
-                "    self.constraint_list=list",
+                "    IK_FK_constraints = mel.ik_fk_blend(joints)",
+                "    self.IK_FK_constraints = IK_FK_constraints",
                 "",
-                "ik_fk_duplicate(self.joint_list)"
+                "",
+                "ik_fk_duplicate_blend(self.joints)"
             ]
         },
-        "/leg/IK_FK_duplicate_blend/FK_control": {
+        "/leg/IK_FK_duplicate_blend/FK_controls": {
+            "child_order": [
+                "IK_controls"
+            ],
+            "enabled": true,
+            "attrs": {
+                "FK_ctrl_grps": {},
+                "FK_skip": {
+                    "type": "list",
+                    "value": "[\"l_toes_end_FK\"]"
+                },
+                "aimAxis": {
+                    "type": "str",
+                    "value": "\"X\""
+                }
+            },
             "code": [
-                "def handFKCtrls(joints):",
+                "def FKCtrls(FK_joints,ctrl_skip):",
                 "    # FK control",
                 "    ctrl_offset_grp_names = []",
                 "    ctrl_names = []",
-                "    for joint in joints:",
-                "        FK_joint = joint + \"_FK\"",
-                "        FK_control = control.create(name=joint + \"_FK\",translateTo=joint,scale=${scale},color=${color})",
-                "        ctrl_names.append(FK_control[1])     ",
-                "        ctrl_offset_grp_names.append(FK_control[0])",
+                "    for joint in FK_joints:",
+                "        if not joint in ctrl_skip:",
+                "            if not joint.endswith(\"_end\"):",
+                "                FK_control = control.create(name=joint,translateTo=joint,scale=0.06,color=12,aimAxis=\"X\")",
+                "                ctrl_names.append(FK_control[1])     ",
+                "                ctrl_offset_grp_names.append(FK_control[0])",
                 "",
-                "        ",
-                "        mc.parentConstraint(FK_control[1], FK_joint)",
+                "                ",
+                "                mc.parentConstraint(FK_control[1], joint)",
                 "        ",
                 "    # Parent ",
                 "    # Humerus > Radius > Wrist",
@@ -122,10 +141,53 @@
                 "    output = [ctrl_offset_grp_names,ctrl_names]",
                 "    return output",
                 "        ",
-                "# Run the func and store the data.",
-                "self.FK_grps = handFKCtrls(self.joint_list)",
+                "        ",
+                "self.FK_ctrl_grps = FKCtrls(self.FK_joints,self.FK_skip)",
                 "",
                 ""
+            ]
+        },
+        "/leg/IK_FK_duplicate_blend/FK_controls/IK_controls": {
+            "code": [
+                "def createIK_ctrl(joints,IK_joints,endEffector):",
+                "    # create IK control at the end joint",
+                "",
+                "    IK_control = control.create(name=IK_joints[endEffector],translateTo=IK_joints[endEffector],scale=0.05,type=\"Four Arrows\",aimAxis=\"X\")",
+                "    print(\"temp_2\")",
+                "    # Orient constraint from the IK controller to the IK end effector joint ",
+                "    # IK_wrist_ori_const = mc.orientConstraint(IK_control[1],joints[endEffector])",
+                "",
+                "    return IK_control",
+                "    ",
+                "createIK_ctrl(self.joints,self.IK_joints,2)",
+                "",
+                "# create pole vector control with offset",
+                "def poleVectorCtrl(pv_joint):",
+                "    # Create Pole Vector location using Locators.",
+                "    main_locator = mc.spaceLocator(n=\"main_loc\",p=[0,0,0])",
+                "    sub_locator = mc.spaceLocator(n=\"sub_loc\")",
+                "    ",
+                "    # have to move the locator",
+                "    mc.parent(sub_locator,main_locator)",
+                "    temp = mc.parentConstraint(pv_joint, main_locator)",
+                "    ",
+                "    PV_control = control.create(name=pv_joint + \"_pv\", aimAxis=\"Z\",translateTo=pv_joint,scale=0.02,type=\"Sphere Pin\")",
+                "    mc.delete(mc.parentConstraint(sub_locator,PV_control[0]))",
+                "    mc.delete(temp)",
+                "    mc.delete(main_locator)",
+                "    ",
+                "    return PV_control",
+                "",
+                "poleVectorCtrl(\"l_knee\")",
+                "",
+                "# create IK effector",
+                "def IKEffector(ik_joints,startJoint,endEffector):",
+                "    # set IK effector",
+                "    ikHandle = mc.ikHandle(n=ik_joints[startJoint] + \"_Handle\", sj = ik_joints[startJoint], ee= ik_joints[endEffector],sol=\"ikRPsolver\")",
+                "    mc.parent(ikHandle[0], ik_joints[endEffector] + \"_ctrl\")",
+                "    return ikHandle[0]",
+                "    ",
+                "IKEffector(self.IK_joints,0,2)"
             ]
         }
     }

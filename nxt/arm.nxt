@@ -49,6 +49,7 @@
             "/IK_ctrl": false,
             "/arm": false,
             "/arm/IK_FK_blend": false,
+            "/arm/IK_FK_blend/FK_ctrl/IK_ctrl": false,
             "/arm/IK_FK_blend/FK_ctrl/IK_ctrl/IK_FK_switcher": true,
             "/hand": false,
             "/hand/IK_FK_blend/FK_ctrl": false,

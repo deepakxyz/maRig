@@ -20,11 +20,9 @@ class Control:
     Class for create, update and set color to the controler
     '''
 
-    # reload test command
-    print("Reloaded 10")
 
     # Create controls
-    def create(self, name="control", type="circle", translateTo="", aimAxis="Y", scale=1.0, suffix="_ctrl", color=21, thickness=1.0, parent=""
+    def create(self, name="control", type="Circle", translateTo="", aimAxis="Y", scale=1.0, suffix="_ctrl", color=21, thickness=1.0, parent=""
                ):
         '''
         @param name: str, name of the controller, @default: control
@@ -42,9 +40,11 @@ class Control:
 
         '''
         # Create control
-        if type == "circle":
+
+        if type == "Circle":
             control = mc.circle(name=name + suffix, d=3,
                                 r=scale, nr=[0, 1, 0], ch=False)
+            control = control[0]
         else:
             control = mc.curve(name=name + suffix, d=1,
                                p=ControlShapes.cvTuples[type])

@@ -11,8 +11,8 @@ proc alignAtoB(string $objA, string $objB) {
 
 // Duplicate joints from selection
 // Make the selection from parent to child.
-global proc string duplicateJoints(string $suffix, string $joints[]){
-    string $output;
+global proc string[] duplicateJoints(string $suffix, string $joints[]){
+    string $output[];
     // string $joints[] = `ls -type "joint" -type "transform" -sl -l`;
     for ($joint in $joints){
         select $joint;
@@ -21,7 +21,7 @@ global proc string duplicateJoints(string $suffix, string $joints[]){
         string $jointName = $buffer[size($buffer)-1];
         // create new joint node
         string $duplicateJoint = `createNode "joint" -n ($jointName + $suffix)`;
-        $output = $duplicateJoint;
+        $output[size($output)] = $duplicateJoint;
         alignAtoB($duplicateJoint, $joint);
         
         
