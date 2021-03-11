@@ -1,0 +1,87 @@
+{
+    "version": "1.17",
+    "alias": "utility",
+    "color": "#8d5323",
+    "mute": true,
+    "solo": true,
+    "references": [
+        "Z:/Piper/maRig/nxt/fingers.nxt",
+        "Z:/Piper/maRig/nxt/arm.nxt",
+        "Z:/Piper/maRig/nxt/leg.nxt"
+    ],
+    "comp_overrides": {
+        "Z:/Piper/maRig/nxt/arm.nxt": {
+            "solo": false
+        },
+        "Z:/Piper/maRig/nxt/fingers.nxt": {
+            "solo": false,
+            "mute": false
+        },
+        "Z:/Piper/maRig/nxt/leg.nxt": {
+            "solo": false
+        }
+    },
+    "meta_data": {
+        "positions": {
+            "/arm": [
+                -2671.357767158031,
+                -195.22497515154828
+            ],
+            "/arm2": [
+                -1885.3383977482354,
+                -202.4988178540131
+            ],
+            "/l_fingers": [
+                -2264.5668654127044,
+                -197.0176775071128
+            ],
+            "/leg": [
+                -1082.6917973058548,
+                -217.69657243950655
+            ],
+            "/leg/IK_FK_duplicate_blend/FK_controls/IK_controls/IK_FK_switch": [
+                0.0,
+                0.0
+            ],
+            "/leg2": [
+                -609.0,
+                -214.0
+            ],
+            "/locator_placement": [
+                -2533.1540224633295,
+                -335.74326817457813
+            ],
+            "/r_fingers": [
+                -1474.1677233229102,
+                -203.70760068898082
+            ]
+        },
+        "collapse": {
+            "/fingers/node": true,
+            "/l_fingers/FK_ctrl": false,
+            "/leg/IK_FK_duplicate_blend/FK_controls/IK_controls": false,
+            "/leg/IK_FK_duplicate_blend/FK_controls/IK_controls/IK_FK_switch": true,
+            "/leg/IK_FK_duplicate_blend/FK_controls/IK_controls/IK_toe_control": false,
+            "/leg2": false,
+            "/node": true
+        }
+    },
+    "nodes": {
+        "/arm2": {
+            "execute_in": "/l_fingers"
+        },
+        "/l_fingers": {
+            "execute_in": "/arm"
+        },
+        "/leg": {
+            "execute_in": "/r_fingers"
+        },
+        "/leg2": {
+            "execute_in": "/leg"
+        },
+        "/locator_placement": {},
+        "/r_fingers": {
+            "execute_in": "/arm2"
+        }
+    }
+}

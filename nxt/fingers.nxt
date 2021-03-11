@@ -1,0 +1,182 @@
+{
+    "version": "1.17",
+    "alias": "fingers",
+    "color": "#0052aa",
+    "mute": false,
+    "solo": false,
+    "meta_data": {
+        "positions": {
+            "/l_fingers": [
+                -1653.5039225972723,
+                82.00425224783586
+            ],
+            "/r_fingers": [
+                -2177.4205421176202,
+                -164.4239318663305
+            ]
+        }
+    },
+    "nodes": {
+        "/l_fingers": {
+            "child_order": [
+                "FK_ctrl"
+            ],
+            "attrs": {
+                "joints": {}
+            },
+            "code": [
+                "self.joints = [[\"l_pointy2\",\"l_pointy3\",\"l_pointy4\"],",
+                "                [\"l_middle2\",\"l_middle3\",\"l_middle4\"],",
+                "                [\"l_ring2\",\"l_ring3\",\"l_ring4\"],",
+                "                [\"l_pinky2\",\"l_pinky3\",\"l_pinky4\"],",
+                "                [\"l_thumb1\",\"l_thumb2\",\"l_thumb3\"]",
+                "                ]",
+                "     "
+            ]
+        },
+        "/l_fingers/FK_ctrl": {
+            "attrs": {
+                "color": {
+                    "type": "int",
+                    "value": "20"
+                },
+                "scale": {
+                    "type": "float",
+                    "value": "0.005"
+                }
+            },
+            "code": [
+                "# finger control",
+                "def finger_ctrl(FK_joints,ctrl_skip):",
+                "    # FK control",
+                "    ctrl_offset_grp_names = []",
+                "    ctrl_names = []",
+                "    for joint in FK_joints:",
+                "        if not joint in ctrl_skip:",
+                "            if not joint.endswith(\"_end\"):",
+                "                FK_control = control.create(name=joint + \"_FK\",type=\"Circle Pin\",aimAxis=\"X\",translateTo=joint,scale=${scale},color=${color})",
+                "                ctrl_names.append(FK_control[1])     ",
+                "                ctrl_offset_grp_names.append(FK_control[0])",
+                "",
+                "                ",
+                "                mc.parentConstraint(FK_control[1], joint)",
+                "        ",
+                "    # Parent ",
+                "    # Humerus > Radius > Wrist",
+                "    for i in range(len(ctrl_names)):",
+                "        try:",
+                "            mc.parent( ctrl_offset_grp_names[i + 1], ctrl_names[i])",
+                "        except:",
+                "            pass",
+                "",
+                "    # return offset group and control",
+                "    output = [ctrl_offset_grp_names, ctrl_names]",
+                "    return output",
+                "",
+                "",
+                "",
+                "# Create finger controllers",
+                "finger_ctrl_grps = []",
+                "",
+                "for list in self.joints:",
+                "    finger_ctrls = finger_ctrl(list,[])",
+                "    finger_ctrl_grps.append(finger_ctrls)",
+                "    ",
+                "# Create base group",
+                "base_grp = mc.group(n=\"l_finger\",em=1)",
+                "mc.delete(mc.parentConstraint(\"l_wrist\",base_grp))",
+                "",
+                "",
+                "for i in finger_ctrl_grps:",
+                "    top_ctrl_offset_grp = i[0][0]",
+                "    mc.parent(top_ctrl_offset_grp,base_grp)",
+                "    ",
+                "#  parent constraint the base group to the wrist joint",
+                "mc.parentConstraint(\"l_wrist\",base_grp)"
+            ]
+        },
+        "/r_fingers": {
+            "child_order": [
+                "FK_ctrl"
+            ],
+            "attrs": {
+                "joints": {}
+            },
+            "code": [
+                "self.joints = [[\"r_pointy2\",\"r_pointy3\",\"r_pointy4\"],",
+                "                [\"r_middle2\",\"r_middle3\",\"r_middle4\"],",
+                "                [\"r_ring2\",\"r_ring3\",\"r_ring4\"],",
+                "                [\"r_pinky2\",\"r_pinky3\",\"r_pinky4\"],",
+                "                [\"r_thumb1\",\"r_thumb2\",\"r_thumb3\"]",
+                "                ]",
+                "     ",
+                "     "
+            ]
+        },
+        "/r_fingers/FK_ctrl": {
+            "attrs": {
+                "color": {
+                    "type": "int",
+                    "value": "20"
+                },
+                "scale": {
+                    "type": "float",
+                    "value": "0.005"
+                },
+                "wrist_joint": {
+                    "type": "str",
+                    "value": "\"r_wrist\""
+                }
+            },
+            "code": [
+                "# finger control",
+                "def finger_ctrl(FK_joints,ctrl_skip):",
+                "    # FK control",
+                "    ctrl_offset_grp_names = []",
+                "    ctrl_names = []",
+                "    for joint in FK_joints:",
+                "        if not joint in ctrl_skip:",
+                "            if not joint.endswith(\"_end\"):",
+                "                FK_control = control.create(name=joint + \"_FK\",type=\"Circle Pin\",aimAxis=\"-X\",translateTo=joint,scale=${scale},color=${color})",
+                "                ctrl_names.append(FK_control[1])     ",
+                "                ctrl_offset_grp_names.append(FK_control[0])",
+                "",
+                "                ",
+                "                mc.parentConstraint(FK_control[1], joint)",
+                "        ",
+                "    # Parent ",
+                "    # Humerus > Radius > Wrist",
+                "    for i in range(len(ctrl_names)):",
+                "        try:",
+                "            mc.parent( ctrl_offset_grp_names[i + 1], ctrl_names[i])",
+                "        except:",
+                "            pass",
+                "",
+                "    # return offset group and control",
+                "    output = [ctrl_offset_grp_names, ctrl_names]",
+                "    return output",
+                "",
+                "",
+                "",
+                "# Create finger controllers",
+                "finger_ctrl_grps = []",
+                "",
+                "for list in self.joints:",
+                "    finger_ctrls = finger_ctrl(list,[])",
+                "    finger_ctrl_grps.append(finger_ctrls)",
+                "    ",
+                "# Create base group",
+                "base_grp = mc.group(n=\"r_finger\",em=1)",
+                "mc.delete(mc.parentConstraint(${wrist_joint},base_grp))",
+                "",
+                "",
+                "for i in finger_ctrl_grps:",
+                "    top_ctrl_offset_grp = i[0][0]",
+                "    mc.parent(top_ctrl_offset_grp,base_grp)",
+                "    ",
+                "#  parent constraint the base group to the wrist joint",
+                "mc.parentConstraint(${wrist_joint},base_grp)"
+            ]
+        }
+    }
+}
